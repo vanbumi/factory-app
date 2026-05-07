@@ -66,49 +66,75 @@ export function RecentOrders() {
         </CardTitle>
       </CardHeader>
       <CardContent>
-        <Table>
-          <TableHeader>
-            <TableRow className="border-border/50 hover:bg-transparent">
-              <TableHead className="text-muted-foreground font-medium">
-                No. Pesanan
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                Pelanggan
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium hidden md:table-cell">
-                Produk
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium hidden lg:table-cell">
-                Jumlah
-              </TableHead>
-              <TableHead className="text-muted-foreground font-medium">
-                Status
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {orders.map((order) => (
-              <TableRow
-                key={order.id}
-                className="border-border/50 hover:bg-muted/50"
-              >
-                <TableCell className="font-medium font-mono text-sm">
+        {/* Tampilan MOBILE: Card List */}
+        <div className="md:hidden space-y-3">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background hover:bg-muted/50 transition-colors"
+            >
+              <div className="flex-1 min-w-0 mr-3">
+                <p className="font-mono text-sm font-medium truncate">
                   {order.id}
-                </TableCell>
-                <TableCell>{order.customer}</TableCell>
-                <TableCell className="hidden md:table-cell text-muted-foreground">
-                  {order.product}
-                </TableCell>
-                <TableCell className="hidden lg:table-cell text-muted-foreground">
-                  {order.quantity}
-                </TableCell>
-                <TableCell>
-                  <StatusBadge status={order.status} label={order.statusLabel} />
-                </TableCell>
+                </p>
+                <p className="text-sm text-muted-foreground truncate">
+                  {order.customer}
+                </p>
+                <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                  {order.product} · {order.quantity}
+                </p>
+              </div>
+              <StatusBadge status={order.status} label={order.statusLabel} />
+            </div>
+          ))}
+        </div>
+
+        {/* Tampilan DESKTOP: Table */}
+        <div className="hidden md:block">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-border/50 hover:bg-transparent">
+                <TableHead className="text-muted-foreground font-medium">
+                  No. Pesanan
+                </TableHead>
+                <TableHead className="text-muted-foreground font-medium">
+                  Pelanggan
+                </TableHead>
+                <TableHead className="text-muted-foreground font-medium hidden lg:table-cell">
+                  Produk
+                </TableHead>
+                <TableHead className="text-muted-foreground font-medium hidden lg:table-cell">
+                  Jumlah
+                </TableHead>
+                <TableHead className="text-muted-foreground font-medium">
+                  Status
+                </TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+            </TableHeader>
+            <TableBody>
+              {orders.map((order) => (
+                <TableRow
+                  key={order.id}
+                  className="border-border/50 hover:bg-muted/50"
+                >
+                  <TableCell className="font-medium font-mono text-sm">
+                    {order.id}
+                  </TableCell>
+                  <TableCell>{order.customer}</TableCell>
+                  <TableCell className="hidden lg:table-cell text-muted-foreground">
+                    {order.product}
+                  </TableCell>
+                  <TableCell className="hidden lg:table-cell text-muted-foreground">
+                    {order.quantity}
+                  </TableCell>
+                  <TableCell>
+                    <StatusBadge status={order.status} label={order.statusLabel} />
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
       </CardContent>
     </Card>
   )

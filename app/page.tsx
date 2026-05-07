@@ -16,17 +16,17 @@ import {
 export default function DashboardPage() {
   return (
     <DashboardLayout>
-      <div className="space-y-6">
+      <div className="space-y-6 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
         {/* Header */}
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Dashboard</h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Selamat datang kembali! Berikut ringkasan aktivitas pabrik hari ini.
           </p>
         </div>
 
         {/* KPI Cards */}
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
             title="Total Produksi"
             value="27,400"
@@ -58,13 +58,17 @@ export default function DashboardPage() {
         </div>
 
         {/* Charts Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
-          <ProductionChart />
-          <InventoryChart />
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="min-h-[300px] sm:min-h-[350px]">
+            <ProductionChart />
+          </div>
+          <div className="min-h-[300px] sm:min-h-[350px]">
+            <InventoryChart />
+          </div>
         </div>
 
         {/* Tables Row */}
-        <div className="grid gap-6 lg:grid-cols-2">
+        <div className="grid gap-6 md:grid-cols-2">
           <RecentOrders />
           <MachineStatus />
         </div>
