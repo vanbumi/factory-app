@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Search, ShoppingCart, Clock, CheckCircle, AlertTriangle } from "lucide-react"
+import { Plus, Search, ShoppingCart, Clock, CheckCircle, AlertTriangle, Pencil, Trash2 } from "lucide-react"
 
 type Order = {
   id: string
@@ -65,6 +65,40 @@ export default function PesananPage() {
       o.customerId.toLowerCase().includes(search.toLowerCase()) ||
       o.product.toLowerCase().includes(search.toLowerCase())
     )
+
+  async function handleEdit(order: Order) {
+    const customerId = window.prompt("Pelanggan", order.customerId)
+    if (!customerId) return
+    const product = window.prompt("Produk", order.product)
+    if (!product) return
+    const quantity = window.prompt("Jumlah", order.quantity)
+    if (!quantity) return
+    const status = window.prompt("Status (Produksi/Selesai/Pending)", order.status)
+    if (!status) return
+
+    const res = await fetch("/api/orders", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id, customerId, product, quantity, status }),
+    })
+
+    if (res.ok) fetchOrders()
+    else alert("Gagal update pesanan")
+  }
+
+  async function handleDelete(order: Order) {
+    const ok = window.confirm(`Hapus pesanan ${order.id}?`)
+    if (!ok) return
+
+    const res = await fetch("/api/orders", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: order.id }),
+    })
+
+    if (res.ok) fetchOrders()
+    else alert("Gagal hapus pesanan")
+  }
 
   return (
     <div className="space-y-6">
@@ -181,6 +215,7 @@ export default function PesananPage() {
                   <TableHead className="text-muted-foreground hidden lg:table-cell">Jumlah</TableHead>
                   <TableHead className="text-muted-foreground">Status</TableHead>
                   <TableHead className="text-muted-foreground hidden lg:table-cell">Tanggal</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -194,6 +229,16 @@ export default function PesananPage() {
                       <StatusBadge status={statusMap[o.status] || "info"} label={o.status} />
                     </TableCell>
                     <TableCell className="hidden lg:table-cell text-muted-foreground">{o.date}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(o)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(o)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

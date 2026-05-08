@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { db } from "@/lib/db"
 import { productions } from "@/lib/db/schema"
+import { eq } from "drizzle-orm"
 
 export async function GET() {
   try {
@@ -37,5 +38,46 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error("POST Error:", error)
     return NextResponse.json({ error: "Gagal tambah produksi" }, { status: 500 })
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  try {
+    const body = await request.json()
+
+    if (!body.id || !body.orderId || !body.qtyProduced || !body.date) {
+      return NextResponse.json({ error: "Data tidak lengkap" }, { status: 400 })
+    }
+
+    await db
+      .update(productions)
+      .set({
+        orderId: body.orderId,
+        qtyProduced: body.qtyProduced,
+        date: body.date,
+        shift: body.shift || null,
+      })
+      .where(eq(productions.id, body.id))
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("PUT Error:", error)
+    return NextResponse.json({ error: "Gagal update produksi" }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    const { id } = await request.json()
+
+    if (!id) {
+      return NextResponse.json({ error: "ID wajib diisi" }, { status: 400 })
+    }
+
+    await db.delete(productions).where(eq(productions.id, id))
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    console.error("DELETE Error:", error)
+    return NextResponse.json({ error: "Gagal hapus produksi" }, { status: 500 })
   }
 }

@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Search, Users, Phone, MapPin } from "lucide-react"
+import { Plus, Search, Users, Phone, MapPin, Pencil, Trash2 } from "lucide-react"
 
 type Customer = {
   id: string
@@ -53,6 +53,36 @@ export default function CustomersPage() {
     (c.phone && c.phone.toLowerCase().includes(search.toLowerCase())) ||
     (c.address && c.address.toLowerCase().includes(search.toLowerCase()))
   )
+
+  async function handleEdit(customer: Customer) {
+    const name = window.prompt("Nama pelanggan", customer.name)
+    if (!name) return
+    const phone = window.prompt("Telepon", customer.phone || "") ?? ""
+    const address = window.prompt("Alamat", customer.address || "") ?? ""
+
+    const res = await fetch("/api/customers", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: customer.id, name, phone, address }),
+    })
+
+    if (res.ok) fetchCustomers()
+    else alert("Gagal update pelanggan")
+  }
+
+  async function handleDelete(customer: Customer) {
+    const ok = window.confirm(`Hapus pelanggan ${customer.name}?`)
+    if (!ok) return
+
+    const res = await fetch("/api/customers", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: customer.id }),
+    })
+
+    if (res.ok) fetchCustomers()
+    else alert("Gagal hapus pelanggan")
+  }
 
   return (
     <div className="space-y-6">
@@ -153,6 +183,7 @@ export default function CustomersPage() {
                   <TableHead className="text-muted-foreground">Nama</TableHead>
                   <TableHead className="text-muted-foreground hidden sm:table-cell">Telepon</TableHead>
                   <TableHead className="text-muted-foreground hidden md:table-cell">Alamat</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -162,6 +193,16 @@ export default function CustomersPage() {
                     <TableCell className="font-medium">{c.name}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{c.phone || "-"}</TableCell>
                     <TableCell className="hidden md:table-cell text-muted-foreground">{c.address || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(c)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(c)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>

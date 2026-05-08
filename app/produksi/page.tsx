@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Search, Factory, TrendingUp, CheckCircle, Clock } from "lucide-react"
+import { Plus, Search, Factory, TrendingUp, CheckCircle, Clock, Pencil, Trash2 } from "lucide-react"
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 type Production = {
@@ -64,6 +64,39 @@ export default function ProduksiPage() {
     p.orderId.toLowerCase().includes(search.toLowerCase()) ||
     (p.shift && p.shift.toLowerCase().includes(search.toLowerCase()))
   )
+
+  async function handleEdit(production: Production) {
+    const orderId = window.prompt("No. PO", production.orderId)
+    if (!orderId) return
+    const qtyProduced = window.prompt("Qty Diproduksi", production.qtyProduced)
+    if (!qtyProduced) return
+    const date = window.prompt("Tanggal (YYYY-MM-DD)", production.date)
+    if (!date) return
+    const shift = window.prompt("Shift", production.shift || "") ?? ""
+
+    const res = await fetch("/api/productions", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: production.id, orderId, qtyProduced, date, shift }),
+    })
+
+    if (res.ok) fetchProductions()
+    else alert("Gagal update produksi")
+  }
+
+  async function handleDelete(production: Production) {
+    const ok = window.confirm(`Hapus data produksi ${production.id}?`)
+    if (!ok) return
+
+    const res = await fetch("/api/productions", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: production.id }),
+    })
+
+    if (res.ok) fetchProductions()
+    else alert("Gagal hapus produksi")
+  }
 
   return (
     <div className="space-y-6">
@@ -196,6 +229,7 @@ export default function ProduksiPage() {
                   <TableHead className="text-muted-foreground">Qty</TableHead>
                   <TableHead className="text-muted-foreground">Tanggal</TableHead>
                   <TableHead className="text-muted-foreground hidden sm:table-cell">Shift</TableHead>
+                  <TableHead className="text-right">Aksi</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -206,6 +240,16 @@ export default function ProduksiPage() {
                     <TableCell>{p.qtyProduced}</TableCell>
                     <TableCell className="text-muted-foreground">{p.date}</TableCell>
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{p.shift || "-"}</TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => handleEdit(p)}>
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
