@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react"
 import { StatusBadge } from "@/components/dashboard/status-badge"
+import { OrderForm } from "@/components/orders/order-form"
 
 type Order = {
   id: string
@@ -16,6 +17,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [filter, setFilter] = useState("Semua")
+  const [showForm, setShowForm] = useState(false)
 
   useEffect(() => {
     fetch("/api/orders")
@@ -43,7 +45,7 @@ export default function OrdersPage() {
           <p className="text-muted-foreground text-sm">Kelola semua pesanan produksi</p>
         </div>
         <button
-          onClick={() => alert("Form tambah pesanan akan dibuat di step berikutnya")}
+          onClick={() => setShowForm(true)}
           className="bg-brand-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-brand-700 transition-all"
         >
           + Pesanan Baru
@@ -101,6 +103,18 @@ export default function OrdersPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {showForm && (
+        <OrderForm
+          onClose={() => setShowForm(false)}
+          onSuccess={() => {
+            // Refresh data
+            fetch("/api/orders")
+              .then((res) => res.json())
+              .then((data) => setOrders(data))
+          }}
+        />
       )}
     </div>
   )
