@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect } from "react"
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { KPICard } from "@/components/dashboard/kpi-card"
 import { ProductionChart } from "@/components/dashboard/charts/production-chart"
@@ -13,7 +14,23 @@ import {
   TrendingUp,
 } from "lucide-react"
 
+type DashboardData = {
+  totalProduksi: number
+  pesananAktif: number
+  pendapatan: number
+  totalStok: number
+}
+
 export default function DashboardPage() {
+  const [data, setData] = useState<DashboardData | null>(null)
+
+  useEffect(() => {
+    fetch("/api/dashboard")
+      .then((res) => res.json())
+      .then((result) => setData(result))
+      .catch(() => {})
+  }, [])
+
   return (
     <DashboardLayout>
       <div className="space-y-6 px-4 sm:px-6 lg:px-8 max-w-[1400px] mx-auto">
@@ -29,28 +46,28 @@ export default function DashboardPage() {
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
           <KPICard
             title="Total Produksi"
-            value="27,400"
+            value={data ? data.totalProduksi.toLocaleString() : "..."}
             change={12.5}
             changeLabel="dari minggu lalu"
             icon={Factory}
           />
           <KPICard
             title="Stok Bahan Baku"
-            value="13,306 kg"
+            value={data ? `${data.totalStok.toLocaleString()} kg` : "..."}
             change={-3.2}
             changeLabel="dari bulan lalu"
             icon={Package}
           />
           <KPICard
             title="Pesanan Aktif"
-            value="48"
+            value={data ? data.pesananAktif.toString() : "..."}
             change={8.1}
             changeLabel="dari minggu lalu"
             icon={ShoppingCart}
           />
           <KPICard
             title="Pendapatan"
-            value="Rp 847 jt"
+            value={data ? `Rp ${(data.pendapatan / 1000000).toFixed(0)} jt` : "..."}
             change={15.3}
             changeLabel="dari bulan lalu"
             icon={TrendingUp}
