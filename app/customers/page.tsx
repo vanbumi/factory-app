@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { CustomerForm } from "@/components/customers/customer-form"
 
 type Customer = {
   id: string
@@ -12,8 +13,9 @@ type Customer = {
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
   const [loading, setLoading] = useState(true)
+  const [showForm, setShowForm] = useState(false)
 
-  useEffect(() => {
+  function fetchCustomers() {
     fetch("/api/customers")
       .then((res) => res.json())
       .then((data) => {
@@ -21,13 +23,25 @@ export default function CustomersPage() {
         setLoading(false)
       })
       .catch(() => setLoading(false))
+  }
+
+  useEffect(() => {
+    fetchCustomers()
   }, [])
 
   return (
     <div className="p-4 sm:p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">Pelanggan</h1>
-        <p className="text-muted-foreground text-sm">Daftar pelanggan terdaftar</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Pelanggan</h1>
+          <p className="text-muted-foreground text-sm">Daftar pelanggan terdaftar</p>
+        </div>
+        <button
+          onClick={() => setShowForm(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-blue-700 transition-all"
+        >
+          + Pelanggan Baru
+        </button>
       </div>
 
       {loading ? (
@@ -57,6 +71,17 @@ export default function CustomersPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {showForm && (
+        <CustomerForm
+          onClose={() => setShowForm(false)}
+          onSuccess={() => {
+            setShowForm(false)
+            setLoading(true)
+            fetchCustomers()
+          }}
+        />
       )}
     </div>
   )
