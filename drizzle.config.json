@@ -1,0 +1,9 @@
+{
+  "schema": "./lib/db/schema.ts",
+  "out": "./drizzle",
+  "dialect": "turso",
+  "dbCredentials": {
+    "url": "libsql://factory-db-vanbumi.aws-ap-northeast-1.turso.io",
+    "authToken": "eyJhbGciOiJFZERTQSIsInR5cCI6IkpXVCJ9..."
+  }
+}

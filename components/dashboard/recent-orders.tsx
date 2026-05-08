@@ -1,139 +1,100 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
 import { StatusBadge } from "./status-badge"
 
-const orders = [
-  {
-    id: "PO-2024-001",
-    customer: "PT Maju Jaya",
-    product: "Botol HDPE 500ml",
-    quantity: "10,000 pcs",
-    status: "success" as const,
-    statusLabel: "Selesai",
-    date: "07 Mei 2024",
-  },
-  {
-    id: "PO-2024-002",
-    customer: "CV Sejahtera",
-    product: "Kantong PP 30x40",
-    quantity: "50,000 pcs",
-    status: "info" as const,
-    statusLabel: "Produksi",
-    date: "06 Mei 2024",
-  },
-  {
-    id: "PO-2024-003",
-    customer: "PT Indo Plastik",
-    product: "Galon PET 19L",
-    quantity: "5,000 pcs",
-    status: "warning" as const,
-    statusLabel: "Pending",
-    date: "05 Mei 2024",
-  },
-  {
-    id: "PO-2024-004",
-    customer: "UD Berkah",
-    product: "Tutup Botol PP",
-    quantity: "100,000 pcs",
-    status: "info" as const,
-    statusLabel: "Produksi",
-    date: "04 Mei 2024",
-  },
-  {
-    id: "PO-2024-005",
-    customer: "PT Sentosa",
-    product: "Pipa PVC 3 inch",
-    quantity: "2,000 m",
-    status: "success" as const,
-    statusLabel: "Selesai",
-    date: "03 Mei 2024",
-  },
-]
+type Order = {
+  id: string
+  customerId: string
+  product: string
+  quantity: string
+  status: string
+  date: string
+}
 
 export function RecentOrders() {
+  const [orders, setOrders] = useState<Order[]>([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    fetch("/api/orders")
+      .then((res) => res.json())
+      .then((data) => {
+        setOrders(data)
+        setLoading(false)
+      })
+      .catch(() => setLoading(false))
+  }, [])
+
+  const statusMap: Record<string, "success" | "warning" | "info" | "error"> = {
+    Selesai: "success",
+    Produksi: "info",
+    Pending: "warning",
+  }
+
+  if (loading) {
+    return (
+      <Card className="border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base font-medium">Pesanan Terbaru</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">Memuat...</p>
+        </CardContent>
+      </Card>
+    )
+  }
+
   return (
     <Card className="border-border/50">
       <CardHeader className="pb-3">
-        <CardTitle className="text-base font-medium">
-          Pesanan Terbaru
-        </CardTitle>
+        <CardTitle className="text-base font-medium">Pesanan Terbaru</CardTitle>
       </CardHeader>
       <CardContent>
-        {/* Tampilan MOBILE: Card List */}
-        <div className="md:hidden space-y-3">
-          {orders.map((order) => (
-            <div
-              key={order.id}
-              className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background hover:bg-muted/50 transition-colors"
-            >
-              <div className="flex-1 min-w-0 mr-3">
-                <p className="font-mono text-sm font-medium truncate">
-                  {order.id}
-                </p>
-                <p className="text-sm text-muted-foreground truncate">
-                  {order.customer}
-                </p>
-                <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
-                  {order.product} · {order.quantity}
-                </p>
+        {orders.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Belum ada pesanan</p>
+        ) : (
+          <div className="md:hidden space-y-3">
+            {orders.map((order) => (
+              <div
+                key={order.id}
+                className="flex items-center justify-between p-3 rounded-lg border border-border/50 bg-background hover:bg-muted/50 transition-colors"
+              >
+                <div className="flex-1 min-w-0 mr-3">
+                  <p className="font-mono text-sm font-medium truncate">{order.id}</p>
+                  <p className="text-sm text-muted-foreground truncate">{order.customerId}</p>
+                  <p className="text-xs text-muted-foreground/70 truncate mt-0.5">
+                    {order.product} · {order.quantity}
+                  </p>
+                </div>
+                <StatusBadge status={statusMap[order.status] || "info"} label={order.status} />
               </div>
-              <StatusBadge status={order.status} label={order.statusLabel} />
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
-        {/* Tampilan DESKTOP: Table */}
         <div className="hidden md:block">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-border/50 hover:bg-transparent">
-                <TableHead className="text-muted-foreground font-medium">
-                  No. Pesanan
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium">
-                  Pelanggan
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium hidden lg:table-cell">
-                  Produk
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium hidden lg:table-cell">
-                  Jumlah
-                </TableHead>
-                <TableHead className="text-muted-foreground font-medium">
-                  Status
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border/50">
+                <th className="text-left py-2 font-medium text-muted-foreground">No. Pesanan</th>
+                <th className="text-left py-2 font-medium text-muted-foreground">Pelanggan</th>
+                <th className="text-left py-2 font-medium text-muted-foreground">Status</th>
+              </tr>
+            </thead>
+            <tbody>
               {orders.map((order) => (
-                <TableRow
-                  key={order.id}
-                  className="border-border/50 hover:bg-muted/50"
-                >
-                  <TableCell className="font-medium font-mono text-sm">
-                    {order.id}
-                  </TableCell>
-                  <TableCell>{order.customer}</TableCell>
-                  <TableCell className="hidden lg:table-cell text-muted-foreground">
-                    {order.product}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-muted-foreground">
-                    {order.quantity}
-                  </TableCell>
-                  <TableCell>
-                    <StatusBadge status={order.status} label={order.statusLabel} />
-                  </TableCell>
-                </TableRow>
+                <tr key={order.id} className="border-b border-border/50 hover:bg-muted/50">
+                  <td className="py-2 font-mono text-sm">{order.id}</td>
+                  <td className="py-2">{order.customerId}</td>
+                  <td className="py-2">
+                    <StatusBadge status={statusMap[order.status] || "info"} label={order.status} />
+                  </td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         </div>
       </CardContent>
     </Card>
