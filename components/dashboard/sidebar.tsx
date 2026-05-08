@@ -22,7 +22,7 @@ const navigation = [
   { name: "Produksi", href: "/produksi", icon: Factory },
   { name: "Inventori", href: "/inventori", icon: Package },
   { name: "Pesanan", href: "/pesanan", icon: ShoppingCart },
-  { name: "Pelanggan", href: "/pelanggan", icon: Users },
+  { name: "Pelanggan", href: "/customers", icon: Users },
   { name: "Mesin", href: "/mesin", icon: Cog },
   { name: "Scan QR", href: "/scan", icon: QrCode },
   { name: "Laporan", href: "/laporan", icon: BarChart3 },
