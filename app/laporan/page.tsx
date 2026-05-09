@@ -10,7 +10,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
-import { Download, FileText, BarChart3, TrendingUp, Package } from "lucide-react"
+import { Download, FileText, BarChart3, Package, Table2 } from "lucide-react"
+import { downloadCsvFile } from "@/lib/csv-export"
 import {
   LineChart,
   Line,
@@ -37,13 +38,25 @@ const COLORS = [
 const MONTH_LABELS = ["Jan", "Feb", "Mar", "Apr", "Mei", "Jun", "Jul", "Agu", "Sep", "Okt", "Nov", "Des"]
 
 type OrderRow = {
+  id?: string
+  customerId?: string
+  customer_id?: string
   product?: string
+  quantity?: string
+  status?: string
+  date?: string
   createdAt?: string
   created_at?: string
 }
 
 type ProductionRow = {
+  id?: string
+  orderId?: string
+  order_id?: string
+  qtyProduced?: string
+  qty_produced?: string
   date?: string
+  shift?: string | null
   createdAt?: string
   created_at?: string
 }
@@ -85,30 +98,39 @@ function productionMonthKey(p: ProductionRow): string | null {
 /** Estimasi sama dashboard: jumlah pesanan × 17,5 jt (per bulan, dari jumlah order di bulan itu) */
 const REVENUE_PER_ORDER_JT = 17.5
 
+function todaySlug() {
+  const d = new Date()
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+}
+
 const reports = [
   {
     id: 1,
-    title: "Laporan Produksi Bulanan",
-    description: "Ringkasan produksi dan efisiensi mesin",
-    icon: BarChart3,
+    title: "Detail pesanan (CSV)",
+    description: "Semua baris pesanan — cocok dicek di Excel",
+    icon: FileText,
+    action: "orders" as const,
   },
   {
     id: 2,
-    title: "Laporan Inventori",
-    description: "Stok bahan baku dan pergerakan material",
-    icon: Package,
+    title: "Detail produksi (CSV)",
+    description: "Semua entri produksi — cocok dicek di Excel",
+    icon: BarChart3,
+    action: "productions" as const,
   },
   {
     id: 3,
-    title: "Laporan Keuangan",
-    description: "Pendapatan, pengeluaran, dan profit",
-    icon: TrendingUp,
+    title: "Ringkasan per bulan (CSV)",
+    description: "Agregat 6 bulan terakhir — sama sumber dengan grafik",
+    icon: Table2,
+    action: "summary" as const,
   },
   {
     id: 4,
-    title: "Laporan Pesanan",
-    description: "Status pesanan dan pengiriman",
-    icon: FileText,
+    title: "Inventori & keuangan",
+    description: "Export menyusul setelah modul dilengkapi",
+    icon: Package,
+    action: null,
   },
 ]
 
@@ -174,6 +196,87 @@ export default function ReportsPage() {
     })
   }, [productions, monthKeys])
 
+  function exportOrdersCsv() {
+    const header = [
+      "id",
+      "pelanggan_id",
+      "produk",
+      "jumlah",
+      "status",
+      "tanggal_tampil",
+      "tanggal_dibuat",
+    ]
+    const rows: string[][] = [header]
+    for (const o of orders) {
+      rows.push([
+        o.id ?? "",
+        String(o.customerId ?? o.customer_id ?? ""),
+        o.product ?? "",
+        o.quantity ?? "",
+        o.status ?? "",
+        o.date ?? "",
+        String(o.createdAt ?? o.created_at ?? ""),
+      ])
+    }
+    downloadCsvFile(`laporan-pesanan-${todaySlug()}.csv`, rows)
+  }
+
+  function exportProductionsCsv() {
+    const header = [
+      "id",
+      "no_po",
+      "qty_diproduksi",
+      "tanggal",
+      "shift",
+      "tanggal_dibuat",
+    ]
+    const rows: string[][] = [header]
+    for (const p of productions) {
+      rows.push([
+        p.id ?? "",
+        String(p.orderId ?? p.order_id ?? ""),
+        String(p.qtyProduced ?? p.qty_produced ?? ""),
+        p.date ?? "",
+        p.shift ?? "",
+        String(p.createdAt ?? p.created_at ?? ""),
+      ])
+    }
+    downloadCsvFile(`laporan-produksi-${todaySlug()}.csv`, rows)
+  }
+
+  function exportSummaryCsv() {
+    const header = [
+      "tahun_bulan",
+      "label_bulan",
+      "jumlah_pesanan",
+      "estimasi_pendapatan_jt",
+      "catatan_estimasi",
+      "jumlah_entri_produksi",
+      "target_demo_benchmark",
+      "catatan_target",
+    ]
+    const rows: string[][] = [header]
+    const estNote = `Asumsi demo: ${REVENUE_PER_ORDER_JT} jt per pesanan (bukan faktur)`
+    const tgtNote = "Target demo: max(aktual, ceil(aktual×1,15)); bukan RPP resmi"
+    for (let i = 0; i < monthKeys.length; i++) {
+      const ym = monthKeys[i]
+      const ordCount = orders.filter((o) => orderMonthKey(o) === ym).length
+      const prodCount = productions.filter((p) => productionMonthKey(p) === ym).length
+      const targetBench = Math.max(prodCount, Math.ceil(prodCount * 1.15) || 1)
+      rows.push([
+        ym,
+        labelForYm(ym),
+        String(ordCount),
+        String(Math.round(ordCount * REVENUE_PER_ORDER_JT * 10) / 10),
+        estNote,
+        String(prodCount),
+        String(targetBench),
+        tgtNote,
+      ])
+    }
+    downloadCsvFile(`laporan-ringkasan-bulanan-${todaySlug()}.csv`, rows)
+  }
+
   const productMixData = useMemo(() => {
     const map = new Map<string, number>()
     for (const o of orders) {
@@ -201,9 +304,11 @@ export default function ReportsPage() {
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Laporan</h1>
-          <p className="text-muted-foreground">Analisis dari data pesanan & produksi (6 bulan terakhir)</p>
+          <p className="text-muted-foreground">
+            Grafik dan unduhan CSV memakai data nyata dari menu Pesanan & Produksi (6 bulan terakhir di grafik).
+          </p>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <Select defaultValue="current">
             <SelectTrigger className="w-[160px]">
               <SelectValue placeholder="Rentang" />
@@ -212,9 +317,38 @@ export default function ReportsPage() {
               <SelectItem value="current">6 bulan terakhir</SelectItem>
             </SelectContent>
           </Select>
-          <Button variant="outline" size="sm" type="button" disabled title="Menyusul">
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={loading}
+            onClick={exportOrdersCsv}
+            title="Data sama dengan yang Anda input di menu Pesanan"
+          >
             <Download className="mr-2 h-4 w-4" />
-            Export
+            CSV pesanan
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            type="button"
+            disabled={loading}
+            onClick={exportProductionsCsv}
+            title="Data sama dengan yang Anda input di menu Produksi"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV produksi
+          </Button>
+          <Button
+            variant="default"
+            size="sm"
+            type="button"
+            disabled={loading}
+            onClick={exportSummaryCsv}
+            title="Ringkatan per bulan — selaras dengan grafik di bawah"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            CSV ringkasan
           </Button>
         </div>
       </div>
@@ -227,8 +361,12 @@ export default function ReportsPage() {
         <Card className="border-border/50">
           <CardHeader>
             <CardTitle className="text-base font-medium">
-              Estimasi pendapatan bulanan (jt Rp, dari jumlah pesanan)
+              Estimasi pendapatan bulanan (jt Rp)
             </CardTitle>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong>Input nyata:</strong> jumlah pesanan per bulan. <strong>Demo / MVP:</strong> dikalikan asumsi{" "}
+              {REVENUE_PER_ORDER_JT} jt per pesanan — bukan faktur atau pembukuan resmi.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -267,7 +405,12 @@ export default function ReportsPage() {
 
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Jumlah entri produksi vs target (+15%)</CardTitle>
+            <CardTitle className="text-base font-medium">Produksi: aktual vs benchmark demo</CardTitle>
+            <p className="text-xs text-muted-foreground leading-relaxed">
+              <strong>Aktual:</strong> jumlah entri produksi per bulan (data nyata). <strong>Batang abu-abu:</strong>{" "}
+              benchmark demo max(aktual, ceil(aktual×1,15)) — bukan target RPP resmi; untuk pilot bisa diganti field
+              database nanti.
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -289,7 +432,7 @@ export default function ReportsPage() {
                     }}
                     labelStyle={{ color: "oklch(0.93 0 0)" }}
                   />
-                  <Bar dataKey="target" fill="oklch(0.35 0 0)" radius={[4, 4, 0, 0]} name="Target" />
+                  <Bar dataKey="target" fill="oklch(0.35 0 0)" radius={[4, 4, 0, 0]} name="Benchmark demo" />
                   <Bar dataKey="actual" fill="oklch(0.65 0.18 160)" radius={[4, 4, 0, 0]} name="Aktual" />
                 </BarChart>
               </ResponsiveContainer>
@@ -297,7 +440,7 @@ export default function ReportsPage() {
             <div className="mt-4 flex items-center justify-center gap-6 text-sm">
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full" style={{ backgroundColor: "oklch(0.35 0 0)" }} />
-                <span className="text-muted-foreground">Target</span>
+                <span className="text-muted-foreground">Benchmark demo</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="h-3 w-3 rounded-full bg-primary" />
@@ -309,7 +452,10 @@ export default function ReportsPage() {
 
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Komposisi produk (dari nama produk di pesanan)</CardTitle>
+            <CardTitle className="text-base font-medium">Komposisi produk</CardTitle>
+            <p className="text-xs text-muted-foreground">
+              Proporsi dari <strong>nama produk</strong> pada pesanan yang Anda masukkan (data nyata).
+            </p>
           </CardHeader>
           <CardContent>
             <div className="h-[280px]">
@@ -355,26 +501,38 @@ export default function ReportsPage() {
 
         <Card className="border-border/50">
           <CardHeader>
-            <CardTitle className="text-base font-medium">Laporan cepat</CardTitle>
-            <p className="text-xs text-muted-foreground">Sinkron data: {syncLabel}</p>
+            <CardTitle className="text-base font-medium">Unduh data (sama dengan grafik)</CardTitle>
+            <p className="text-xs text-muted-foreground">Terakhir diambil: {syncLabel}</p>
           </CardHeader>
           <CardContent className="space-y-3">
             {reports.map((report) => (
               <div
                 key={report.id}
-                className="flex items-center justify-between rounded-lg border border-border/50 bg-secondary/30 p-3"
+                className="flex items-center justify-between gap-3 rounded-lg border border-border/50 bg-secondary/30 p-3"
               >
-                <div className="flex items-center gap-3">
-                  <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
                     <report.icon className="h-5 w-5 text-primary" />
                   </div>
-                  <div>
+                  <div className="min-w-0">
                     <div className="font-medium">{report.title}</div>
                     <div className="text-sm text-muted-foreground">{report.description}</div>
                   </div>
                 </div>
-                <Button variant="ghost" size="icon" type="button" disabled title="Menyusul">
-                  <Download className="h-4 w-4" />
+                <Button
+                  variant="outline"
+                  size="sm"
+                  type="button"
+                  className="shrink-0"
+                  disabled={loading || report.action == null}
+                  onClick={() => {
+                    if (report.action === "orders") exportOrdersCsv()
+                    else if (report.action === "productions") exportProductionsCsv()
+                    else if (report.action === "summary") exportSummaryCsv()
+                  }}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Unduh
                 </Button>
               </div>
             ))}
