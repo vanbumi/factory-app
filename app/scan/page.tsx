@@ -1,7 +1,6 @@
 'use client'
 
 import { useState } from 'react'
-import { DashboardLayout } from '@/components/dashboard/dashboard-layout'
 import { QRScanner } from '@/components/qr/qr-scanner'
 import { QRGenerator } from '@/components/qr/qr-generator'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -173,8 +172,7 @@ export default function ScanPage() {
   }
 
   return (
-    <DashboardLayout>
-      <div className="space-y-6">
+    <div className="space-y-6">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">QR Code Scanner</h1>
           <p className="text-muted-foreground">
@@ -450,7 +448,6 @@ export default function ScanPage() {
             </div>
           </TabsContent>
         </Tabs>
-      </div>
-    </DashboardLayout>
+    </div>
   )
 }

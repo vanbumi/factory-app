@@ -20,6 +20,7 @@ import {
   Users,
   Cog,
   BarChart3,
+  QrCode,
 } from "lucide-react"
 
 const navigation = [
@@ -29,6 +30,7 @@ const navigation = [
   { name: "Pesanan", href: "/pesanan", icon: ShoppingCart },
   { name: "Pelanggan", href: "/customers", icon: Users },
   { name: "Mesin", href: "/mesin", icon: Cog },
+  { name: "Scan QR", href: "/scan", icon: QrCode },
   { name: "Laporan", href: "/laporan", icon: BarChart3 },
 ]
 
