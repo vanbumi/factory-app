@@ -35,6 +35,7 @@ export default function PesananPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Order | null>(null)
   const [filter, setFilter] = useState("Semua")
   const [search, setSearch] = useState("")
 
@@ -66,26 +67,6 @@ export default function PesananPage() {
       o.product.toLowerCase().includes(search.toLowerCase())
     )
 
-  async function handleEdit(order: Order) {
-    const customerId = window.prompt("Pelanggan", order.customerId)
-    if (!customerId) return
-    const product = window.prompt("Produk", order.product)
-    if (!product) return
-    const quantity = window.prompt("Jumlah", order.quantity)
-    if (!quantity) return
-    const status = window.prompt("Status (Produksi/Selesai/Pending)", order.status)
-    if (!status) return
-
-    const res = await fetch("/api/orders", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: order.id, customerId, product, quantity, status }),
-    })
-
-    if (res.ok) fetchOrders()
-    else alert("Gagal update pesanan")
-  }
-
   async function handleDelete(order: Order) {
     const ok = window.confirm(`Hapus pesanan ${order.id}?`)
     if (!ok) return
@@ -108,7 +89,13 @@ export default function PesananPage() {
           <h1 className="text-2xl font-bold tracking-tight">Pesanan</h1>
           <p className="text-muted-foreground">Kelola semua pesanan produksi</p>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null)
+            setShowForm(true)
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Pesanan Baru
         </Button>
@@ -231,7 +218,14 @@ export default function PesananPage() {
                     <TableCell className="hidden lg:table-cell text-muted-foreground">{o.date}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(o)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowForm(false)
+                            setEditing(o)
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => handleDelete(o)}>
@@ -248,11 +242,16 @@ export default function PesananPage() {
       </Card>
 
       {/* Modal Form */}
-      {showForm && (
+      {(showForm || editing) && (
         <OrderForm
-          onClose={() => setShowForm(false)}
+          initial={editing}
+          onClose={() => {
+            setShowForm(false)
+            setEditing(null)
+          }}
           onSuccess={() => {
             setShowForm(false)
+            setEditing(null)
             setLoading(true)
             fetchOrders()
           }}

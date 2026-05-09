@@ -8,12 +8,17 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Package, AlertTriangle, Search, Pencil, Trash2 } from "lucide-react"
 import { Progress } from "@/components/ui/progress"
 import { Input } from "@/components/ui/input"
-import { AddItemDialog } from "@/components/inventory/add-item-dialog"
 import { Button } from "@/components/ui/button"
+import {
+  InventoryItemDialog,
+  type InventoryRow,
+} from "@/components/inventory/inventory-item-dialog"
 
 export default function InventoriPage() {
   const [items, setItems] = useState<any[]>([])
   const [search, setSearch] = useState("")
+  const [itemDialogOpen, setItemDialogOpen] = useState(false)
+  const [editingItem, setEditingItem] = useState<InventoryRow | null>(null)
 
   const fetchInventori = async () => {
     try {
@@ -41,36 +46,16 @@ export default function InventoriPage() {
     )
   })
 
-  async function handleEdit(item: any) {
-    const material_name = window.prompt("Nama bahan", item.material_name)
-    if (!material_name) return
-    const category = window.prompt("Kategori", item.category)
-    if (!category) return
-    const location = window.prompt("Lokasi", item.location)
-    if (!location) return
-    const stock = window.prompt("Stok", String(item.stock))
-    if (!stock) return
-    const min_stock = window.prompt("Minimum stok", String(item.min_stock))
-    if (!min_stock) return
-    const unit = window.prompt("Satuan", item.unit)
-    if (!unit) return
-
-    const res = await fetch("/api/inventori", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: item.id,
-        material_name,
-        category,
-        location,
-        stock: Number(stock),
-        min_stock: Number(min_stock),
-        unit,
-      }),
-    })
-
-    if (res.ok) fetchInventori()
-    else alert("Gagal update inventori")
+  function toInventoryRow(item: any): InventoryRow {
+    return {
+      id: String(item.id),
+      material_name: String(item.material_name ?? ""),
+      category: String(item.category ?? ""),
+      location: String(item.location ?? ""),
+      stock: Number(item.stock) || 0,
+      min_stock: Number(item.min_stock) || 0,
+      unit: String(item.unit ?? ""),
+    }
   }
 
   async function handleDelete(item: any) {
@@ -95,7 +80,14 @@ export default function InventoriPage() {
             <h1 className="text-2xl font-bold tracking-tight">Inventori</h1>
             <p className="text-muted-foreground">Kelola stok bahan baku secara real-time</p>
           </div>
-          <AddItemDialog onRefresh={fetchInventori} />
+          <Button
+            onClick={() => {
+              setEditingItem(null)
+              setItemDialogOpen(true)
+            }}
+          >
+            + Tambah Barang
+          </Button>
         </div>
 
         {/* Stats Section */}
@@ -187,7 +179,14 @@ export default function InventoriPage() {
                       </TableCell>
                       <TableCell className="text-right">
                         <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(item)}>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingItem(toInventoryRow(item))
+                              setItemDialogOpen(true)
+                            }}
+                          >
                             <Pencil className="h-4 w-4" />
                           </Button>
                           <Button size="sm" variant="destructive" onClick={() => handleDelete(item)}>
@@ -202,6 +201,16 @@ export default function InventoriPage() {
             </Table>
           </CardContent>
         </Card>
+
+        <InventoryItemDialog
+          open={itemDialogOpen}
+          onOpenChange={(open) => {
+            setItemDialogOpen(open)
+            if (!open) setEditingItem(null)
+          }}
+          initialItem={editingItem}
+          onSaved={fetchInventori}
+        />
       </div>
     </DashboardLayout>
   )

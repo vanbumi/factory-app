@@ -28,6 +28,7 @@ export default function ProduksiPage() {
   const [productions, setProductions] = useState<Production[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Production | null>(null)
   const [search, setSearch] = useState("")
 
   function fetchProductions() {
@@ -65,25 +66,6 @@ export default function ProduksiPage() {
     (p.shift && p.shift.toLowerCase().includes(search.toLowerCase()))
   )
 
-  async function handleEdit(production: Production) {
-    const orderId = window.prompt("No. PO", production.orderId)
-    if (!orderId) return
-    const qtyProduced = window.prompt("Qty Diproduksi", production.qtyProduced)
-    if (!qtyProduced) return
-    const date = window.prompt("Tanggal (YYYY-MM-DD)", production.date)
-    if (!date) return
-    const shift = window.prompt("Shift", production.shift || "") ?? ""
-
-    const res = await fetch("/api/productions", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: production.id, orderId, qtyProduced, date, shift }),
-    })
-
-    if (res.ok) fetchProductions()
-    else alert("Gagal update produksi")
-  }
-
   async function handleDelete(production: Production) {
     const ok = window.confirm(`Hapus data produksi ${production.id}?`)
     if (!ok) return
@@ -106,7 +88,13 @@ export default function ProduksiPage() {
           <h1 className="text-2xl font-bold tracking-tight">Produksi</h1>
           <p className="text-muted-foreground">Kelola dan pantau proses produksi pabrik</p>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null)
+            setShowForm(true)
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Input Produksi
         </Button>
@@ -242,7 +230,14 @@ export default function ProduksiPage() {
                     <TableCell className="hidden sm:table-cell text-muted-foreground">{p.shift || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(p)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowForm(false)
+                            setEditing(p)
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => handleDelete(p)}>
@@ -258,11 +253,16 @@ export default function ProduksiPage() {
         </CardContent>
       </Card>
 
-      {showForm && (
+      {(showForm || editing) && (
         <ProductionForm
-          onClose={() => setShowForm(false)}
+          initial={editing}
+          onClose={() => {
+            setShowForm(false)
+            setEditing(null)
+          }}
           onSuccess={() => {
             setShowForm(false)
+            setEditing(null)
             setLoading(true)
             fetchProductions()
           }}

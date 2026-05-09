@@ -1,18 +1,41 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
+
+export type CustomerFormInitial = {
+  id: string
+  name: string
+  phone: string | null
+  address: string | null
+}
 
 type Props = {
   onClose: () => void
   onSuccess: () => void
+  initial?: CustomerFormInitial | null
 }
 
-export function CustomerForm({ onClose, onSuccess }: Props) {
+export function CustomerForm({ onClose, onSuccess, initial = null }: Props) {
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [address, setAddress] = useState("")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
+
+  const isEdit = Boolean(initial)
+
+  useEffect(() => {
+    if (initial) {
+      setName(initial.name)
+      setPhone(initial.phone ?? "")
+      setAddress(initial.address ?? "")
+    } else {
+      setName("")
+      setPhone("")
+      setAddress("")
+    }
+    setError("")
+  }, [initial])
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -26,9 +49,18 @@ export function CustomerForm({ onClose, onSuccess }: Props) {
     setLoading(true)
     try {
       const res = await fetch("/api/customers", {
-        method: "POST",
+        method: isEdit ? "PUT" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, phone, address }),
+        body: JSON.stringify(
+          isEdit && initial
+            ? {
+                id: initial.id,
+                name: name.trim(),
+                phone: phone.trim() || null,
+                address: address.trim() || null,
+              }
+            : { name: name.trim(), phone: phone.trim() || null, address: address.trim() || null }
+        ),
       })
 
       if (!res.ok) throw new Error("Gagal")
@@ -36,7 +68,7 @@ export function CustomerForm({ onClose, onSuccess }: Props) {
       onSuccess()
       onClose()
     } catch {
-      setError("Gagal menambahkan pelanggan")
+      setError(isEdit ? "Gagal memperbarui pelanggan" : "Gagal menambahkan pelanggan")
     } finally {
       setLoading(false)
     }
@@ -46,7 +78,9 @@ export function CustomerForm({ onClose, onSuccess }: Props) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
       <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-2xl border border-gray-100">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-lg font-bold text-gray-900">Pelanggan Baru</h2>
+          <h2 className="text-lg font-bold text-gray-900">
+            {isEdit ? "Edit Pelanggan" : "Pelanggan Baru"}
+          </h2>
           <button
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-gray-100 text-gray-500"
@@ -62,6 +96,17 @@ export function CustomerForm({ onClose, onSuccess }: Props) {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {isEdit && initial && (
+            <div>
+              <label className="block text-sm font-semibold text-gray-900 mb-1.5">ID Pelanggan</label>
+              <input
+                type="text"
+                value={initial.id}
+                readOnly
+                className="w-full border-2 border-gray-100 rounded-xl px-4 py-2.5 text-sm text-gray-600 bg-gray-50 cursor-not-allowed"
+              />
+            </div>
+          )}
           <div>
             <label className="block text-sm font-semibold text-gray-900 mb-1.5">
               Nama Pelanggan <span className="text-red-500">*</span>
@@ -111,7 +156,7 @@ export function CustomerForm({ onClose, onSuccess }: Props) {
               disabled={loading}
               className="flex-1 bg-blue-600 text-white py-2.5 rounded-xl text-sm font-semibold hover:bg-blue-700 transition-all shadow-lg disabled:bg-blue-300 disabled:text-white"
             >
-              {loading ? "Menyimpan..." : "Simpan"}
+              {loading ? "Menyimpan..." : isEdit ? "Simpan perubahan" : "Simpan"}
             </button>
           </div>
         </form>

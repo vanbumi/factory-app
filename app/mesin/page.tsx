@@ -5,6 +5,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { StatusBadge } from "@/components/dashboard/status-badge"
+import { MachineForm } from "@/components/machines/machine-form"
 import { Plus, Cog, Activity, AlertTriangle, CheckCircle, Pencil, Trash2 } from "lucide-react"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 
@@ -18,11 +19,17 @@ type Machine = {
 
 export default function MachinesPage() {
   const [machines, setMachines] = useState<Machine[]>([])
+  const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Machine | null>(null)
 
   const fetchMachines = async () => {
-    const res = await fetch("/api/machines")
-    const data = await res.json()
-    setMachines(data)
+    try {
+      const res = await fetch("/api/machines")
+      const data = await res.json()
+      setMachines(Array.isArray(data) ? data : [])
+    } catch {
+      setMachines([])
+    }
   }
 
   useEffect(() => {
@@ -32,52 +39,6 @@ export default function MachinesPage() {
   const activeMachines = machines.filter((m) => m.status === "Aktif").length
   const maintenanceMachines = machines.filter((m) => m.status === "Perawatan").length
   const errorMachines = machines.filter((m) => m.status === "Gangguan").length
-
-  async function handleAdd() {
-    const id = window.prompt("ID Mesin (contoh: MCN-001)")
-    if (!id) return
-    const name = window.prompt("Nama Mesin")
-    if (!name) return
-    const status = window.prompt("Status (Aktif/Perawatan/Gangguan)", "Aktif") || "Aktif"
-    const efficiency = window.prompt("Efisiensi (%)", "0") || "0"
-    const lastMaintenance = window.prompt("Last Maintenance (YYYY-MM-DD)", new Date().toISOString().split("T")[0])
-    if (!lastMaintenance) return
-
-    const res = await fetch("/api/machines", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id, name, status, efficiency: Number(efficiency), lastMaintenance }),
-    })
-
-    if (res.ok) fetchMachines()
-    else alert("Gagal tambah mesin")
-  }
-
-  async function handleEdit(machine: Machine) {
-    const name = window.prompt("Nama Mesin", machine.name)
-    if (!name) return
-    const status = window.prompt("Status (Aktif/Perawatan/Gangguan)", machine.status)
-    if (!status) return
-    const efficiency = window.prompt("Efisiensi (%)", String(machine.efficiency || 0))
-    if (!efficiency) return
-    const lastMaintenance = window.prompt("Last Maintenance (YYYY-MM-DD)", machine.lastMaintenance)
-    if (!lastMaintenance) return
-
-    const res = await fetch("/api/machines", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        id: machine.id,
-        name,
-        status,
-        efficiency: Number(efficiency),
-        lastMaintenance,
-      }),
-    })
-
-    if (res.ok) fetchMachines()
-    else alert("Gagal update mesin")
-  }
 
   async function handleDelete(machine: Machine) {
     const ok = window.confirm(`Hapus mesin ${machine.id}?`)
@@ -104,7 +65,13 @@ export default function MachinesPage() {
               Pantau dan kelola mesin produksi
             </p>
           </div>
-          <Button size="sm" onClick={handleAdd}>
+          <Button
+            size="sm"
+            onClick={() => {
+              setEditing(null)
+              setShowForm(true)
+            }}
+          >
             <Plus className="mr-2 h-4 w-4" />
             Tambah Mesin
           </Button>
@@ -171,52 +138,80 @@ export default function MachinesPage() {
             <CardTitle className="text-base font-medium">Daftar Mesin</CardTitle>
           </CardHeader>
           <CardContent>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>ID</TableHead>
-                  <TableHead>Nama</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Efisiensi</TableHead>
-                  <TableHead>Last Maintenance</TableHead>
-                  <TableHead className="text-right">Aksi</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {machines.map((machine) => {
-                  const badgeStatus =
-                    machine.status === "Aktif"
-                      ? "success"
-                      : machine.status === "Perawatan"
-                      ? "warning"
-                      : "error"
+            {machines.length === 0 ? (
+              <p className="text-sm text-muted-foreground py-8 text-center">
+                Belum ada mesin. Klik Tambah Mesin untuk menambah data.
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>ID</TableHead>
+                    <TableHead>Nama</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Efisiensi</TableHead>
+                    <TableHead>Last Maintenance</TableHead>
+                    <TableHead className="text-right">Aksi</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {machines.map((machine) => {
+                    const badgeStatus =
+                      machine.status === "Aktif"
+                        ? "success"
+                        : machine.status === "Perawatan"
+                          ? "warning"
+                          : "error"
 
-                  return (
-                    <TableRow key={machine.id}>
-                      <TableCell className="font-mono text-sm">{machine.id}</TableCell>
-                      <TableCell className="font-medium">{machine.name}</TableCell>
-                      <TableCell>
-                        <StatusBadge status={badgeStatus} label={machine.status} />
-                      </TableCell>
-                      <TableCell>{Number(machine.efficiency || 0)}%</TableCell>
-                      <TableCell>{machine.lastMaintenance}</TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex justify-end gap-2">
-                          <Button size="sm" variant="outline" onClick={() => handleEdit(machine)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button size="sm" variant="destructive" onClick={() => handleDelete(machine)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  )
-                })}
-              </TableBody>
-            </Table>
+                    return (
+                      <TableRow key={machine.id}>
+                        <TableCell className="font-mono text-sm">{machine.id}</TableCell>
+                        <TableCell className="font-medium">{machine.name}</TableCell>
+                        <TableCell>
+                          <StatusBadge status={badgeStatus} label={machine.status} />
+                        </TableCell>
+                        <TableCell>{Number(machine.efficiency || 0)}%</TableCell>
+                        <TableCell>{machine.lastMaintenance}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setShowForm(false)
+                                setEditing(machine)
+                              }}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                            <Button size="sm" variant="destructive" onClick={() => handleDelete(machine)}>
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    )
+                  })}
+                </TableBody>
+              </Table>
+            )}
           </CardContent>
         </Card>
+
+        {(showForm || editing) && (
+          <MachineForm
+            initial={editing}
+            onClose={() => {
+              setShowForm(false)
+              setEditing(null)
+            }}
+            onSuccess={() => {
+              setShowForm(false)
+              setEditing(null)
+              fetchMachines()
+            }}
+          />
+        )}
       </div>
     </DashboardLayout>
   )

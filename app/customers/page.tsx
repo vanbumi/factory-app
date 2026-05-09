@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import { CustomerForm } from "@/components/customers/customer-form"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Plus, Search, Users, Phone, MapPin, Pencil, Trash2 } from "lucide-react"
+import { Plus, Search, Users, Phone, MapPin, Pencil, Trash2, ShoppingCart } from "lucide-react"
 
 type Customer = {
   id: string
@@ -22,29 +22,51 @@ type Customer = {
   address: string | null
 }
 
+type OrderRow = { createdAt?: string; created_at?: string }
+
+function currentMonthPrefix(d = new Date()) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`
+}
+
 export default function CustomersPage() {
   const [customers, setCustomers] = useState<Customer[]>([])
+  const [orders, setOrders] = useState<OrderRow[]>([])
   const [loading, setLoading] = useState(true)
   const [showForm, setShowForm] = useState(false)
+  const [editing, setEditing] = useState<Customer | null>(null)
   const [search, setSearch] = useState("")
 
-  function fetchCustomers() {
-    fetch("/api/customers")
-      .then((res) => res.json())
-      .then((data) => {
-        setCustomers(data)
-        setLoading(false)
-      })
-      .catch(() => setLoading(false))
+  async function loadData() {
+    setLoading(true)
+    try {
+      const [cRes, oRes] = await Promise.all([fetch("/api/customers"), fetch("/api/orders")])
+      const cData = await cRes.json()
+      const oData = await oRes.json()
+      setCustomers(Array.isArray(cData) ? cData : [])
+      setOrders(Array.isArray(oData) ? oData : [])
+    } catch {
+      setCustomers([])
+      setOrders([])
+    } finally {
+      setLoading(false)
+    }
   }
 
   useEffect(() => {
-    fetchCustomers()
+    loadData()
   }, [])
 
   const total = customers.length
   const withPhone = customers.filter((c) => c.phone).length
   const withAddress = customers.filter((c) => c.address).length
+
+  const pesananBulanIni = useMemo(() => {
+    const prefix = currentMonthPrefix()
+    return orders.filter((o) => {
+      const d = o.createdAt ?? o.created_at
+      return typeof d === "string" && d.length >= 7 && d.slice(0, 7) === prefix
+    }).length
+  }, [orders])
 
   const filtered = customers.filter((c) =>
     search === "" ||
@@ -53,22 +75,6 @@ export default function CustomersPage() {
     (c.phone && c.phone.toLowerCase().includes(search.toLowerCase())) ||
     (c.address && c.address.toLowerCase().includes(search.toLowerCase()))
   )
-
-  async function handleEdit(customer: Customer) {
-    const name = window.prompt("Nama pelanggan", customer.name)
-    if (!name) return
-    const phone = window.prompt("Telepon", customer.phone || "") ?? ""
-    const address = window.prompt("Alamat", customer.address || "") ?? ""
-
-    const res = await fetch("/api/customers", {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: customer.id, name, phone, address }),
-    })
-
-    if (res.ok) fetchCustomers()
-    else alert("Gagal update pelanggan")
-  }
 
   async function handleDelete(customer: Customer) {
     const ok = window.confirm(`Hapus pelanggan ${customer.name}?`)
@@ -80,7 +86,7 @@ export default function CustomersPage() {
       body: JSON.stringify({ id: customer.id }),
     })
 
-    if (res.ok) fetchCustomers()
+    if (res.ok) loadData()
     else alert("Gagal hapus pelanggan")
   }
 
@@ -92,7 +98,13 @@ export default function CustomersPage() {
           <h1 className="text-2xl font-bold tracking-tight">Pelanggan</h1>
           <p className="text-muted-foreground">Daftar pelanggan terdaftar</p>
         </div>
-        <Button size="sm" onClick={() => setShowForm(true)}>
+        <Button
+          size="sm"
+          onClick={() => {
+            setEditing(null)
+            setShowForm(true)
+          }}
+        >
           <Plus className="mr-2 h-4 w-4" />
           Pelanggan Baru
         </Button>
@@ -143,10 +155,10 @@ export default function CustomersPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-yellow-100">
-                <Users className="h-5 w-5 text-yellow-600" />
+                <ShoppingCart className="h-5 w-5 text-yellow-600" />
               </div>
               <div>
-                <div className="text-2xl font-bold">0</div>
+                <div className="text-2xl font-bold">{pesananBulanIni}</div>
                 <p className="text-sm text-muted-foreground">Pesanan Bulan Ini</p>
               </div>
             </div>
@@ -195,7 +207,14 @@ export default function CustomersPage() {
                     <TableCell className="hidden md:table-cell text-muted-foreground">{c.address || "-"}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">
-                        <Button size="sm" variant="outline" onClick={() => handleEdit(c)}>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setShowForm(false)
+                            setEditing(c)
+                          }}
+                        >
                           <Pencil className="h-4 w-4" />
                         </Button>
                         <Button size="sm" variant="destructive" onClick={() => handleDelete(c)}>
@@ -211,13 +230,18 @@ export default function CustomersPage() {
         </CardContent>
       </Card>
 
-      {showForm && (
+      {(showForm || editing) && (
         <CustomerForm
-          onClose={() => setShowForm(false)}
+          initial={editing}
+          onClose={() => {
+            setShowForm(false)
+            setEditing(null)
+          }}
           onSuccess={() => {
             setShowForm(false)
+            setEditing(null)
             setLoading(true)
-            fetchCustomers()
+            loadData()
           }}
         />
       )}
